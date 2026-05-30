@@ -1,0 +1,9 @@
+# Binaries
+BRD_Currency
+*.exe
+
+# Don't ignore state.json — we WANT it committed to track history
+# state.json
+
+# Go test cache
+*.test

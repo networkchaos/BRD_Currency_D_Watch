@@ -1,0 +1,48 @@
+name: BRD Currency Alert
+
+on:
+  # Run every time there a price flactuation that can  lead to profit hours — adjust as you like
+  # Format: minute hour day month weekday
+  schedule:
+    - cron: '0 */5 * * *'
+
+  # Also lets you trigger it manually from GitHub UI (useful for testing)
+  workflow_dispatch:
+
+jobs:
+  check-rates:
+    runs-on: ubuntu-latest
+
+    # Give the job permission to push the updated state.json back to the repo
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history so git can commit back
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Run currency alert
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: go run ./cmd/alert/main.go
+
+      - name: Commit updated state.json
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state.json
+          # Only commit if state.json actually changed
+          git diff --staged --quiet || git commit -m "chore: update state.json [skip ci]"
+          git push
